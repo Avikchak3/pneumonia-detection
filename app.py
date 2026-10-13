@@ -1,7 +1,9 @@
+import os
 import streamlit as st
 import tensorflow as tf
 from PIL import Image
 import numpy as np
+import gdown
 
 # ----------------------------------------------------
 # 1. PAGE CONFIGURATION & STYLING
@@ -64,16 +66,28 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ----------------------------------------------------
-# 2. MODEL LOADING (With Error Handling)
+# 2. MODEL LOADING & AUTO-DOWNLOADER FROM GOOGLE DRIVE
 # ----------------------------------------------------
 @st.cache_resource
 def load_model():
     model_path = "pneumonia_densenet121.keras"
+    
+    # Automatically download model weights from Google Drive if not present in the environment
+    if not os.path.exists(model_path):
+        file_id = "1_SMhCDWH_3aWs5hOE2t4zLZae-gFP2ct"
+        url = f"https://drive.google.com/uc?id={file_id}"
+        with st.spinner("📥 Downloading DenseNet121 model weights from cloud storage... Please wait."):
+            try:
+                gdown.download(url, model_path, quiet=False, fuzzy=True)
+            except Exception as e:
+                st.error(f"Failed to download model from cloud: {e}")
+                return None
+
     try:
         model = tf.keras.models.load_model(model_path, compile=False)
         return model
     except Exception as e:
-        st.error(f"Error loading model: {e}")
+        st.error(f"Error loading model structure: {e}")
         return None
 
 with st.spinner("🔄 Loading DenseNet121 AI Engine... Please wait."):
@@ -128,7 +142,7 @@ if uploaded_file is not None:
         # Action button
         if st.button("🔬 Analyze X-Ray"):
             with st.spinner("Analyzing structural features via DenseNet121..."):
-                # Preprocess image to match model input dimensions (typically 224x224)
+                # Preprocess image to match model input dimensions (224x224)
                 img_resized = image.resize((224, 224))
                 img_array = np.array(img_resized) / 255.0
                 img_array = np.expand_dims(img_array, axis=0)
@@ -136,8 +150,6 @@ if uploaded_file is not None:
                 # Model Prediction
                 prediction = model.predict(img_array)[0][0]
                 
-                # Logic: Assuming 0 = NORMAL, 1 = PNEUMONIA (adjust if reversed based on your training labels)
-                # If your model outputs probability of pneumonia:
                 pneumonia_prob = float(prediction)
                 normal_prob = 1.0 - pneumonia_prob
                 
