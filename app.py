@@ -64,17 +64,23 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ----------------------------------------------------
-# 2. MODEL LOADING (Cached for performance)
+# 2. MODEL LOADING (With Error Handling)
 # ----------------------------------------------------
 @st.cache_resource
 def load_model():
-    # Make sure 'pneumonia_densenet121.keras' is in your root directory
     model_path = "pneumonia_densenet121.keras"
-    model = tf.keras.models.load_model(model_path)
-    return model
+    try:
+        model = tf.keras.models.load_model(model_path, compile=False)
+        return model
+    except Exception as e:
+        st.error(f"Error loading model: {e}")
+        return None
 
 with st.spinner("🔄 Loading DenseNet121 AI Engine... Please wait."):
     model = load_model()
+
+if model is None:
+    st.stop() # Stops execution gracefully if the model fails to load
 
 # ----------------------------------------------------
 # 3. SIDEBAR (Information & Guide)
